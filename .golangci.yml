@@ -1,0 +1,14 @@
+linters:
+  enable:
+    - gocyclo
+    - gofumpt
+    - godot
+    - predeclared
+    - unconvert
+
+linter-settings:
+  go-cyclo:
+    min-complexity: 15
+  godot:
+    scope: all
+    capital: true
