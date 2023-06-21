@@ -40,6 +40,7 @@ func run(pass *analysis.Pass) (interface{}, error) {
 
 		if !capCheck {
 			pass.Reportf(n.Pos(), "Slice or array access is not enclosed in an if-statement that validates capacity!")
+			return false
 		}
 
 		return true

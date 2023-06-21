@@ -4,7 +4,7 @@ else
 	BINARY_FILE=goboundcheck
 endif
 
-all: golangci gosec compile
+all: golangci gosec compile test
 
 golangci:
 	golangci-lint run ./...
