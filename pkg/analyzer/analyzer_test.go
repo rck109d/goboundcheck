@@ -8,6 +8,8 @@ import (
 	"golang.org/x/tools/go/analysis/analysistest"
 )
 
+// TestAll takes the test Go code in testdata and runs it through the analyzer to
+// ensure that all tests trigger (or don't trigger) warnings as expected.
 func TestAll(t *testing.T) {
 	wd, err := os.Getwd()
 	if err != nil {
