@@ -128,7 +128,7 @@ func isIfCapCheck(ifStmt *ast.IfStmt, ident *ast.Ident) bool {
 }
 
 // isIdentFuncArg takes a call expression and an ident. It returns true if the given ident is an argument
-// in the call expression, false otherwise
+// in the call expression, false otherwise.
 func isIdentFuncArg(call *ast.CallExpr, ident *ast.Ident) bool {
 	if call.Args == nil {
 		return false
