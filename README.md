@@ -15,3 +15,21 @@ git clone https://github.com/morgenm/goboundcheck
 make
 ```
 This will output the executable file `goboundcheck` on Linux or Mac, and `goboundcheck.exe` on Windows
+
+## Usage
+The syntax of `goboundcheck` is similar to other Go linters, due to being built off of `golang.org/x/tools/go/analysis`. 
+
+To recursively scan code starting in the current directory:
+```bash
+goboundcheck ./...
+``` 
+
+You can also scan specific files:
+```bash
+goboundcheck code1.go code2.ggo
+```
+
+To see other flags and options:
+```bash
+goboundcheck --help
+```
