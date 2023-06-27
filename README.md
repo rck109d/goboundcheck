@@ -2,6 +2,10 @@
 
 **_Go linter that validates all accesses to slices and arrays are bound-checked._**
 
+[![Go](https://github.com/morgenm/goboundcheck/actions/workflows/go.yml/badge.svg)](https://github.com/morgenm/goboundcheck/actions/workflows/go.yml)
+[![golangci-lint](https://github.com/morgenm/goboundcheck/actions/workflows/golangci-lint.yml/badge.svg)](https://github.com/morgenm/goboundcheck/actions/workflows/golangci-lint.yml)
+[![codecov](https://codecov.io/gh/morgenm/goboundcheck/branch/main/graph/badge.svg?token=5CGBX5Q5NC)](https://codecov.io/gh/morgenm/goboundcheck)
+
 ## About
 Go linter which warns of any slice or array accesses which are not enclosed in an if-statement that validates capacity or length. These warnings are meant to help notify developers which accesses aren't bound-checked to help prevent out-of-bound runtime errors. 
 
