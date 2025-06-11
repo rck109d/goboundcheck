@@ -53,6 +53,11 @@ func run(pass *analysis.Pass) (interface{}, error) {
 					capCheck = true // Safe range index access
 					break
 				}
+			case *ast.FuncDecl: // Found a function declaration
+				if isSortInterfaceMethodAccess(x, n, pass) {
+					capCheck = true // Safe sort interface method access
+					break
+				}
 			}
 		}
 
@@ -188,6 +193,115 @@ func isRangeIndexAccess(rangeStmt *ast.RangeStmt, ident *ast.Ident, indexNode as
 		if indexIdent, ok := indexExpr.Index.(*ast.Ident); ok {
 			if rangeKey, ok := rangeStmt.Key.(*ast.Ident); ok {
 				return indexIdent.Name == rangeKey.Name
+			}
+		}
+	}
+	return false
+}
+
+// isSortInterfaceMethodAccess checks if the given index expression is accessed within a Less or Swap method
+// of a type that implements the sort interface, and if the index comes from method parameters.
+func isSortInterfaceMethodAccess(funcDecl *ast.FuncDecl, indexNode ast.Node, pass *analysis.Pass) bool {
+	// Check if this is a Less or Swap method
+	if funcDecl.Name.Name != "Less" && funcDecl.Name.Name != "Swap" {
+		return false
+	}
+
+	// Must be a method (have a receiver)
+	if funcDecl.Recv == nil || len(funcDecl.Recv.List) == 0 {
+		return false
+	}
+
+	// Check if the receiver type implements the sort interface with correct signatures
+	if !implementsSortInterface(funcDecl.Recv.List[0].Type, pass) {
+		return false
+	}
+
+	// Check if the index expression uses a parameter from the method
+	if indexExpr, ok := indexNode.(*ast.IndexExpr); ok {
+		if indexIdent, ok := indexExpr.Index.(*ast.Ident); ok {
+			return isMethodParameter(indexIdent, funcDecl)
+		}
+	}
+
+	return false
+}
+
+// implementsSortInterface checks if the receiver type implements the sort interface with correct signatures.
+func implementsSortInterface(recvType ast.Expr, pass *analysis.Pass) bool {
+	typeObj := pass.TypesInfo.TypeOf(recvType)
+	if typeObj == nil {
+		return false
+	}
+	if ptr, ok := typeObj.(*types.Pointer); ok {
+		typeObj = ptr.Elem()
+	}
+	named, ok := typeObj.(*types.Named)
+	if !ok {
+		return false
+	}
+	hasLen := hasMethodWithSignature(named, "Len", []string{}, []string{"int"})
+	hasLess := hasMethodWithSignature(named, "Less", []string{"int", "int"}, []string{"bool"})
+	hasSwap := hasMethodWithSignature(named, "Swap", []string{"int", "int"}, []string{})
+	return hasLen && hasLess && hasSwap
+}
+
+// hasMethodWithSignature checks if a named type has a method with the exact signature.
+func hasMethodWithSignature(named *types.Named, methodName string, paramTypes []string, returnTypes []string) bool {
+	for i := 0; i < named.NumMethods(); i++ {
+		method := named.Method(i)
+		if method.Name() == methodName {
+			sig, ok := method.Type().(*types.Signature)
+			if !ok {
+				continue
+			}
+			if signatureMatches(sig, paramTypes, returnTypes) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// signatureMatches checks if a signature matches the expected parameter and return types.
+func signatureMatches(sig *types.Signature, paramTypes []string, returnTypes []string) bool {
+	if sig.Params().Len() != len(paramTypes) {
+		return false
+	}
+
+	for j := 0; j < sig.Params().Len(); j++ {
+		paramType := sig.Params().At(j).Type()
+		//#nosec G602
+		if paramType.String() != paramTypes[j] {
+			return false
+		}
+	}
+
+	if sig.Results().Len() != len(returnTypes) {
+		return false
+	}
+
+	for k := 0; k < sig.Results().Len(); k++ {
+		resultType := sig.Results().At(k).Type()
+		//#nosec G602
+		if resultType.String() != returnTypes[k] {
+			return false
+		}
+	}
+
+	return true
+}
+
+// isMethodParameter checks if the given identifier is a parameter of the method.
+func isMethodParameter(ident *ast.Ident, funcDecl *ast.FuncDecl) bool {
+	if funcDecl.Type.Params == nil {
+		return false
+	}
+
+	for _, param := range funcDecl.Type.Params.List {
+		for _, name := range param.Names {
+			if name.Name == ident.Name {
+				return true
 			}
 		}
 	}
