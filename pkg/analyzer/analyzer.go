@@ -21,7 +21,7 @@ var Analyzer = &analysis.Analyzer{
 }
 
 // run scans all index and slice expressions for any accesses which are not enclosed within an if-statement
-// that validates capacity or length.
+// that validates capacity or length, or within a range statement using the range index.
 func run(pass *analysis.Pass) (interface{}, error) {
 	inspector := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
 
@@ -46,6 +46,11 @@ func run(pass *analysis.Pass) (interface{}, error) {
 			case *ast.IfStmt: // Found an if statement
 				if isIfCapCheck(x, ident) {
 					capCheck = true // Was a capacity check, so this expression is fine
+					break
+				}
+			case *ast.RangeStmt: // Found a range statement
+				if isRangeIndexAccess(x, ident, n) {
+					capCheck = true // Safe range index access
 					break
 				}
 			}
@@ -167,5 +172,24 @@ func isCapOrLenCall(call *ast.CallExpr) bool {
 		}
 	}
 
+	return false
+}
+
+// isRangeIndexAccess checks if the given index expression is safely accessed within a range statement.
+func isRangeIndexAccess(rangeStmt *ast.RangeStmt, ident *ast.Ident, indexNode ast.Node) bool {
+	if rangeX, ok := rangeStmt.X.(*ast.Ident); ok {
+		if rangeX.Name != ident.Name {
+			return false
+		}
+	} else {
+		return false
+	}
+	if indexExpr, ok := indexNode.(*ast.IndexExpr); ok {
+		if indexIdent, ok := indexExpr.Index.(*ast.Ident); ok {
+			if rangeKey, ok := rangeStmt.Key.(*ast.Ident); ok {
+				return indexIdent.Name == rangeKey.Name
+			}
+		}
+	}
 	return false
 }
