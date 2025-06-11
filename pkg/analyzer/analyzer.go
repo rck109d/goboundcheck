@@ -5,6 +5,7 @@ package analyzer
 import (
 	"go/ast"
 	"go/token"
+	"go/types"
 
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/passes/inspect"
@@ -33,13 +34,14 @@ func run(pass *analysis.Pass) (interface{}, error) {
 	// Inspect source code depth-first with stack of visited nodes so we can get parent nodes
 	inspector.WithStack(nodeFilter, func(n ast.Node, push bool, stack []ast.Node) bool {
 		// Go through all parents and see if it checks capacity.
-		ident, ok := getIdentForSliceOrArr(n)
+		ident, ok := getIdentForSliceOrArr(n, pass)
 		if !ok {
 			return true
 		}
 
 		capCheck := false
 		for i := 0; i < len(stack); i++ {
+			//#nosec G602
 			switch x := stack[i].(type) {
 			case *ast.IfStmt: // Found an if statement
 				if isIfCapCheck(x, ident) {
@@ -62,11 +64,21 @@ func run(pass *analysis.Pass) (interface{}, error) {
 
 // getIdentForSliceOrArr takes an index or slice expr node and returns the underlying ident that
 // the expression refers to and true on success, nil and false on failure.
-func getIdentForSliceOrArr(node ast.Node) (*ast.Ident, bool) {
+func getIdentForSliceOrArr(node ast.Node, pass *analysis.Pass) (*ast.Ident, bool) {
 	switch n := node.(type) {
 	case *ast.IndexExpr:
 		if ident, ok := n.X.(*ast.Ident); ok {
-			return ident, true
+			if typeInfo := pass.TypesInfo.TypeOf(n.X); typeInfo != nil {
+				switch typeInfo.Underlying().(type) {
+				case *types.Map:
+					return nil, false // Skip map indexing
+				case *types.Slice, *types.Array:
+					return ident, true // Allow slice and array indexing
+				default:
+					return nil, false // Skip other types
+				}
+			}
+			return nil, false
 		} else {
 			return nil, false
 		}

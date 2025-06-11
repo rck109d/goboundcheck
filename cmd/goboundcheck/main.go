@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/morgenm/goboundcheck/pkg/analyzer"
+	"github.com/rck109d/goboundcheck/pkg/analyzer"
 	"golang.org/x/tools/go/analysis/singlechecker"
 )
 

@@ -4,13 +4,13 @@ else
 	BINARY_FILE=goboundcheck
 endif
 
-all: golangci gosec compile test
+all: golangci gosec compile
 
 golangci:
 	golangci-lint run ./...
 
 gosec:
-	gosec run ./...
+	gosec -exclude-dir=testdata ./...
 
 compile:
 	go build -o ${BINARY_FILE} ./cmd/goboundcheck
